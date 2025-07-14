@@ -214,8 +214,11 @@ export function AuthForm({ onAuth }: AuthFormProps) {
                           }
                         }}
                         disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
+                          date > new Date() || date < new Date("1950-01-01")
                         }
+                        fromYear={1950}
+                        toYear={new Date().getFullYear()}
+                        captionLayout="dropdown-buttons"
                         initialFocus
                         className="pointer-events-auto"
                       />
@@ -230,6 +233,27 @@ export function AuthForm({ onAuth }: AuthFormProps) {
               {isLogin ? 'Login' : 'Create Account'}
             </Button>
           </form>
+
+          {/* Guest Login Option */}
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">or</p>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full"
+              onClick={() => onAuth({ 
+                fullName: 'Guest User', 
+                email: 'guest@mirrome.app', 
+                isLogin: true,
+                isGuest: true
+              })}
+            >
+              Continue as Guest
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Limited features available in guest mode
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

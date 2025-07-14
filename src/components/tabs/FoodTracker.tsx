@@ -18,6 +18,12 @@ export function FoodTracker() {
     endTime: ''
   });
 
+  const saveFastingData = () => {
+    // Save to localStorage or state management
+    localStorage.setItem('fastingData', JSON.stringify(fastingData));
+    console.log('Fasting data saved:', fastingData);
+  };
+
   const mealTypes = [
     { id: 'breakfast', label: 'Breakfast', icon: Sun, color: 'text-orange-500' },
     { id: 'lunch', label: 'Lunch', icon: Sun, color: 'text-yellow-500' },
@@ -70,6 +76,14 @@ export function FoodTracker() {
               />
             </div>
           </div>
+          <Button 
+            variant="sakura" 
+            size="sm" 
+            onClick={saveFastingData}
+            className="w-full mt-4"
+          >
+            Save Fasting Schedule
+          </Button>
         </CardContent>
       </Card>
 
