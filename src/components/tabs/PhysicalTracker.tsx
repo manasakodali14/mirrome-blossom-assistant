@@ -68,10 +68,20 @@ export function PhysicalTracker() {
             Period Tracker
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-8">
-            Period tracking feature coming soon! 🌸
-          </p>
+        <CardContent className="space-y-4">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Configure your cycle details in the Period Tracker page (☰ Menu)
+            </p>
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <p className="text-sm font-medium text-primary">
+                Next period predicted: Coming soon
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Based on your cycle data
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

@@ -2,7 +2,7 @@ import { Activity, Apple, CheckSquare, BookOpen, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils";
 
 interface BottomNavigationProps {
-  activeTab: string;
+  currentTab: string;
   onTabChange: (tab: string) => void;
 }
 
@@ -39,13 +39,13 @@ const tabs = [
   }
 ];
 
-export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
+export function BottomNavigation({ currentTab, onTabChange }: BottomNavigationProps) {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-md border-t border-border/50 shadow-sakura z-50">
       <div className="flex items-center justify-around py-2 px-4 max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = currentTab === tab.id;
           
           return (
             <button

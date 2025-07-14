@@ -18,6 +18,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   userName?: string;
+  onItemClick?: (itemId: string) => void;
 }
 
 const menuItems = [
@@ -58,6 +59,12 @@ const menuItems = [
     description: "Manage expenses & goals" 
   },
   { 
+    id: "notifications", 
+    label: "Notification Manager", 
+    icon: Settings, 
+    description: "Manage notifications" 
+  },
+  { 
     id: "export", 
     label: "Export Data", 
     icon: Download, 
@@ -65,13 +72,13 @@ const menuItems = [
   },
 ];
 
-export function Sidebar({ isOpen, onClose, userName = "Guest" }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, userName = "Guest", onItemClick }: SidebarProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
   const handleItemClick = (itemId: string) => {
     setSelectedItem(itemId);
-    // TODO: Navigate to the specific page based on itemId
-    console.log("Navigate to:", itemId);
+    onItemClick?.(itemId);
+    onClose();
   };
 
   return (

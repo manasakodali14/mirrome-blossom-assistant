@@ -15,7 +15,11 @@ interface Task {
   isRecurring?: boolean;
 }
 
-export function TaskManager() {
+interface TaskManagerProps {
+  userName?: string;
+}
+
+export function TaskManager({ userName }: TaskManagerProps = {}) {
   const [tasks, setTasks] = useState<Task[]>([
     { id: '1', title: 'Take morning vitamins', completed: false, isRecurring: true },
     { id: '2', title: 'Drink 8 glasses of water', completed: false, isRecurring: true },
