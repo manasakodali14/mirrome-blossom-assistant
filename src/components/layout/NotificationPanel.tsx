@@ -1,31 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, X, Calendar, AlertTriangle, Heart, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { dataService, NotificationData } from "@/lib/dataService";
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface Notification {
-  id: string;
-  type: "birthday" | "task" | "diary" | "medication" | "health";
-  title: string;
-  message: string;
-  time: string;
-  isRead: boolean;
-}
-
-const mockNotifications: Notification[] = [
+const mockNotifications: NotificationData[] = [
   {
     id: "1",
     type: "medication",
     title: "Breakfast Medication",
     message: "Don't forget to take your Vitamin D3!",
     time: "9:00 AM",
-    isRead: false
+    isRead: false,
+    date: dataService.formatDate(new Date())
   },
   {
     id: "2",
@@ -33,15 +27,8 @@ const mockNotifications: Notification[] = [
     title: "Incomplete Tasks",
     message: "You have 2 tasks pending for today",
     time: "2 hours ago",
-    isRead: false
-  },
-  {
-    id: "3",
-    type: "diary",
-    title: "Diary Entry",
-    message: "How are you feeling today? Write in your diary!",
-    time: "Yesterday",
-    isRead: true
+    isRead: false,
+    date: dataService.formatDate(new Date())
   }
 ];
 
@@ -76,21 +63,42 @@ const getNotificationColor = (type: string) => {
 };
 
 export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const { toast } = useToast();
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = () => {
+    const savedNotifications = dataService.getNotifications();
+    if (savedNotifications.length === 0) {
+      // Load mock data on first visit
+      setNotifications(mockNotifications);
+      dataService.saveNotifications(mockNotifications);
+    } else {
+      setNotifications(savedNotifications);
+    }
+  };
+
   const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, isRead: true }
-          : notification
-      )
+    const updatedNotifications = notifications.map(notification => 
+      notification.id === id 
+        ? { ...notification, isRead: true }
+        : notification
     );
+    setNotifications(updatedNotifications);
+    dataService.saveNotifications(updatedNotifications);
   };
 
   const clearAll = () => {
     setNotifications([]);
+    dataService.saveNotifications([]);
+    toast({
+      title: "Notifications cleared",
+      description: "All notifications have been removed",
+    });
   };
 
   return (

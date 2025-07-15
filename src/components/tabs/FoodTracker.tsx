@@ -1,107 +1,159 @@
-import { useState } from "react";
-import { Apple, Coffee, Sun, Moon, Clock, Calendar as CalendarIcon, Plus, FileDown, Droplets, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { UtensilsCrossed, Coffee, Sandwich, Pizza, Cookie, Clock, Plus, Pill, Calendar, ChevronLeft, ChevronRight, Save, FileText, Activity, Droplets } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarComp } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { dataService, FoodEntry, Medication } from "@/lib/dataService";
+import { useToast } from "@/hooks/use-toast";
+import { MealWidget } from "@/components/ui/meal-widget";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 
 export function FoodTracker() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [foodData, setFoodData] = useState<FoodEntry>({
+    id: '',
+    date: '',
+    breakfast: { food: '', medications: [], sugar: undefined, bp: '' },
+    lunch: { food: '', medications: [], sugar: undefined, bp: '' },
+    dinner: { food: '', medications: [], sugar: undefined, bp: '' },
+    snacks: { food: '', medications: [], sugar: undefined, bp: '' },
+    intermittentFasting: { startTime: '', endTime: '' }
+  });
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [meals, setMeals] = useState({
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    snacks: []
-  });
 
-  const [fastingData, setFastingData] = useState({
-    startTime: '',
-    endTime: ''
-  });
+  useEffect(() => {
+    loadMedications();
+  }, []);
 
-  const [medicationStatus, setMedicationStatus] = useState({
-    breakfast: { taken: false, showAdd: false },
-    lunch: { taken: false, showAdd: false },
-    dinner: { taken: false, showAdd: false },
-    snacks: { taken: false, showAdd: false }
-  });
+  useEffect(() => {
+    loadFoodData();
+  }, [selectedDate, medications]);
 
-  const [sugarBpData, setSugarBpData] = useState({
-    breakfast: { sugar: '', bp: '', showAdd: false },
-    lunch: { sugar: '', bp: '', showAdd: false },
-    dinner: { sugar: '', bp: '', showAdd: false },
-    snacks: { sugar: '', bp: '', showAdd: false }
-  });
+  const loadMedications = () => {
+    const savedMeds = dataService.getMedications();
+    setMedications(savedMeds);
+  };
 
-  const saveFastingData = () => {
-    const dateKey = format(selectedDate, 'yyyy-MM-dd');
-    const existing = JSON.parse(localStorage.getItem('fastingData') || '{}');
-    existing[dateKey] = fastingData;
-    localStorage.setItem('fastingData', JSON.stringify(existing));
+  const loadFoodData = () => {
+    const dateStr = dataService.formatDate(selectedDate);
+    const savedData = dataService.getFoodEntry(dateStr);
     
+    if (savedData) {
+      setFoodData(savedData);
+    } else {
+      // Initialize with medications from manager
+      const mealMeds = {
+        breakfast: medications.filter(m => m.mealType === 'breakfast').map(m => ({ name: m.name, taken: false })),
+        lunch: medications.filter(m => m.mealType === 'lunch').map(m => ({ name: m.name, taken: false })),
+        dinner: medications.filter(m => m.mealType === 'dinner').map(m => ({ name: m.name, taken: false })),
+        snacks: medications.filter(m => m.mealType === 'snacks').map(m => ({ name: m.name, taken: false }))
+      };
+
+      setFoodData({
+        id: dateStr,
+        date: dateStr,
+        breakfast: { food: '', medications: mealMeds.breakfast, sugar: undefined, bp: '' },
+        lunch: { food: '', medications: mealMeds.lunch, sugar: undefined, bp: '' },
+        dinner: { food: '', medications: mealMeds.dinner, sugar: undefined, bp: '' },
+        snacks: { food: '', medications: mealMeds.snacks, sugar: undefined, bp: '' },
+        intermittentFasting: { startTime: '', endTime: '' }
+      });
+    }
+  };
+
+  const validateFasting = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (foodData.intermittentFasting.startTime && foodData.intermittentFasting.endTime) {
+      const start = new Date(`2000-01-01 ${foodData.intermittentFasting.startTime}`);
+      const end = new Date(`2000-01-01 ${foodData.intermittentFasting.endTime}`);
+      
+      if (end <= start) {
+        newErrors.fasting = "End time must be after start time";
+      }
+    } else if (foodData.intermittentFasting.startTime && !foodData.intermittentFasting.endTime) {
+      newErrors.fasting = "Please enter end time";
+    } else if (!foodData.intermittentFasting.startTime && foodData.intermittentFasting.endTime) {
+      newErrors.fasting = "Please enter start time";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const saveAllData = () => {
+    if (!validateFasting()) return;
+    
+    const dateStr = dataService.formatDate(selectedDate);
+    const dataToSave = { ...foodData, id: dateStr, date: dateStr };
+    
+    dataService.saveFoodEntry(dateStr, dataToSave);
     toast({
-      title: "Fasting Schedule Saved",
-      description: `Data saved for ${format(selectedDate, 'MMM d, yyyy')}`,
+      title: "Food data saved! 🍽️",
+      description: "Your meal and health information has been recorded",
     });
   };
 
-  const saveMealData = () => {
-    const dateKey = format(selectedDate, 'yyyy-MM-dd');
-    const existing = JSON.parse(localStorage.getItem('mealData') || '{}');
-    existing[dateKey] = {
-      meals,
-      medications: medicationStatus,
-      sugarBp: sugarBpData
-    };
-    localStorage.setItem('mealData', JSON.stringify(existing));
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    setSelectedDate(newDate);
+  };
+
+  const updateMealData = (meal: 'breakfast' | 'lunch' | 'dinner' | 'snacks', field: string, value: any) => {
+    setFoodData(prev => ({
+      ...prev,
+      [meal]: {
+        ...prev[meal],
+        [field]: value
+      }
+    }));
+  };
+
+  const toggleMedication = (meal: 'breakfast' | 'lunch' | 'dinner' | 'snacks', medIndex: number) => {
+    setFoodData(prev => ({
+      ...prev,
+      [meal]: {
+        ...prev[meal],
+        medications: prev[meal].medications.map((med, index) => 
+          index === medIndex ? { ...med, taken: !med.taken } : med
+        )
+      }
+    }));
+  };
+
+  const addCustomMedication = (meal: 'breakfast' | 'lunch' | 'dinner' | 'snacks', medName: string) => {
+    if (!medName.trim()) return;
     
-    toast({
-      title: "Meal Data Saved",
-      description: `All data saved for ${format(selectedDate, 'MMM d, yyyy')}`,
-    });
+    setFoodData(prev => ({
+      ...prev,
+      [meal]: {
+        ...prev[meal],
+        medications: [...prev[meal].medications, { name: medName, taken: false }]
+      }
+    }));
   };
 
   const exportToDoctor = () => {
     toast({
-      title: "Export Started",
-      description: "Preparing medical report for download...",
+      title: "Export functionality",
+      description: "PDF export will be implemented soon",
     });
-    // Export functionality would be implemented here
   };
 
-  const mealTypes = [
-    { id: 'breakfast', label: 'Breakfast', icon: Sun, color: 'text-orange-500' },
-    { id: 'lunch', label: 'Lunch', icon: Sun, color: 'text-yellow-500' },
-    { id: 'dinner', label: 'Dinner', icon: Moon, color: 'text-blue-500' },
-    { id: 'snacks', label: 'Snacks', icon: Apple, color: 'text-green-500' }
-  ];
-
-  const handleMedicationToggle = (mealId: string, field: string, value: any) => {
-    setMedicationStatus(prev => ({
-      ...prev,
-      [mealId]: {
-        ...prev[mealId],
-        [field]: value
-      }
-    }));
-  };
-
-  const handleSugarBpChange = (mealId: string, field: string, value: any) => {
-    setSugarBpData(prev => ({
-      ...prev,
-      [mealId]: {
-        ...prev[mealId],
-        [field]: value
-      }
-    }));
+  const isToday = () => {
+    const today = new Date();
+    return selectedDate.toDateString() === today.toDateString();
   };
 
   return (
@@ -109,47 +161,64 @@ export function FoodTracker() {
       <Card className="bg-gradient-soft shadow-sakura">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Apple className="h-5 w-5 text-primary" />
+            <UtensilsCrossed className="h-5 w-5 text-primary" />
             Food Tracker
           </CardTitle>
           <CardDescription>
-            Track your meals, medications, and health metrics
+            Track your meals, medications, and health metrics 🌸
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Date Selection */}
+      {/* Date Navigation */}
       <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-            Select Date
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal shadow-soft",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigateDate('prev')}
+              className="hover:shadow-sakura"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "min-w-[200px] justify-center text-center font-medium shadow-soft hover:shadow-sakura",
+                      isToday() && "bg-primary/10 border-primary/30"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {format(selectedDate, "EEE, MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <CalendarComp
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {isToday() && <Badge variant="secondary">Today</Badge>}
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigateDate('next')}
+              className="hover:shadow-sakura"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -168,8 +237,11 @@ export function FoodTracker() {
               <Input
                 id="startTime"
                 type="time"
-                value={fastingData.startTime}
-                onChange={(e) => setFastingData(prev => ({ ...prev, startTime: e.target.value }))}
+                value={foodData.intermittentFasting.startTime}
+                onChange={(e) => setFoodData(prev => ({ 
+                  ...prev, 
+                  intermittentFasting: { ...prev.intermittentFasting, startTime: e.target.value }
+                }))}
                 className="shadow-soft focus:shadow-sakura transition-shadow"
               />
             </div>
@@ -178,152 +250,106 @@ export function FoodTracker() {
               <Input
                 id="endTime"
                 type="time"
-                value={fastingData.endTime}
-                onChange={(e) => setFastingData(prev => ({ ...prev, endTime: e.target.value }))}
+                value={foodData.intermittentFasting.endTime}
+                onChange={(e) => setFoodData(prev => ({ 
+                  ...prev, 
+                  intermittentFasting: { ...prev.intermittentFasting, endTime: e.target.value }
+                }))}
                 className="shadow-soft focus:shadow-sakura transition-shadow"
               />
             </div>
           </div>
-          <Button 
-            variant="sakura" 
-            size="sm" 
-            onClick={saveFastingData}
-            className="w-full"
-          >
-            Save Fasting Schedule
-          </Button>
+          {errors.fasting && (
+            <p className="text-sm text-destructive">{errors.fasting}</p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Meal Sections */}
-      {mealTypes.map((mealType) => {
-        const Icon = mealType.icon;
-        const mealId = mealType.id as keyof typeof medicationStatus;
+      {/* Meal Widgets */}
+      <MealWidget
+        mealType="breakfast"
+        icon={Coffee}
+        title="Breakfast"
+        bgGradient="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30"
+        food={foodData.breakfast.food}
+        medications={foodData.breakfast.medications}
+        sugar={foodData.breakfast.sugar}
+        bp={foodData.breakfast.bp}
+        onFoodChange={(value) => updateMealData('breakfast', 'food', value)}
+        onMedicationToggle={(index) => toggleMedication('breakfast', index)}
+        onSugarChange={(value) => updateMealData('breakfast', 'sugar', value)}
+        onBPChange={(value) => updateMealData('breakfast', 'bp', value)}
+        onAddMedication={(name) => addCustomMedication('breakfast', name)}
+      />
+
+      <MealWidget
+        mealType="lunch"
+        icon={Sandwich}
+        title="Lunch"
+        bgGradient="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30"
+        food={foodData.lunch.food}
+        medications={foodData.lunch.medications}
+        sugar={foodData.lunch.sugar}
+        bp={foodData.lunch.bp}
+        onFoodChange={(value) => updateMealData('lunch', 'food', value)}
+        onMedicationToggle={(index) => toggleMedication('lunch', index)}
+        onSugarChange={(value) => updateMealData('lunch', 'sugar', value)}
+        onBPChange={(value) => updateMealData('lunch', 'bp', value)}
+        onAddMedication={(name) => addCustomMedication('lunch', name)}
+      />
+
+      <MealWidget
+        mealType="dinner"
+        icon={Pizza}
+        title="Dinner"
+        bgGradient="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30"
+        food={foodData.dinner.food}
+        medications={foodData.dinner.medications}
+        sugar={foodData.dinner.sugar}
+        bp={foodData.dinner.bp}
+        onFoodChange={(value) => updateMealData('dinner', 'food', value)}
+        onMedicationToggle={(index) => toggleMedication('dinner', index)}
+        onSugarChange={(value) => updateMealData('dinner', 'sugar', value)}
+        onBPChange={(value) => updateMealData('dinner', 'bp', value)}
+        onAddMedication={(name) => addCustomMedication('dinner', name)}
+      />
+
+      <MealWidget
+        mealType="snacks"
+        icon={Cookie}
+        title="Snacks"
+        bgGradient="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30"
+        food={foodData.snacks.food}
+        medications={foodData.snacks.medications}
+        sugar={foodData.snacks.sugar}
+        bp={foodData.snacks.bp}
+        onFoodChange={(value) => updateMealData('snacks', 'food', value)}
+        onMedicationToggle={(index) => toggleMedication('snacks', index)}
+        onSugarChange={(value) => updateMealData('snacks', 'sugar', value)}
+        onBPChange={(value) => updateMealData('snacks', 'bp', value)}
+        onAddMedication={(name) => addCustomMedication('snacks', name)}
+      />
+
+      {/* Action Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Button 
+          onClick={saveAllData}
+          variant="sakura" 
+          className="w-full shadow-sakura hover:shadow-lg"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          Save All Data
+        </Button>
         
-        return (
-          <Card key={mealType.id} className="shadow-soft">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Icon className={`h-5 w-5 ${mealType.color}`} />
-                {mealType.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Meal Items */}
-              <div className="space-y-3">
-                {meals[mealId].length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    No {mealType.label.toLowerCase()} added yet
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {/* Meal items would be rendered here */}
-                  </div>
-                )}
-                <Button variant="outline" size="sm" className="w-full">
-                  Add {mealType.label}
-                </Button>
-              </div>
-
-              <Separator />
-
-              {/* Medications Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Medications</Label>
-                  <Checkbox
-                    checked={medicationStatus[mealId].showAdd}
-                    onCheckedChange={(checked) => 
-                      handleMedicationToggle(mealId, 'showAdd', checked)
-                    }
-                  />
-                </div>
-                
-                {medicationStatus[mealId].showAdd && (
-                  <div className="space-y-2 p-3 bg-secondary/50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`med-${mealId}`}
-                        checked={medicationStatus[mealId].taken}
-                        onCheckedChange={(checked) => 
-                          handleMedicationToggle(mealId, 'taken', checked)
-                        }
-                      />
-                      <Label htmlFor={`med-${mealId}`} className="text-sm">
-                        Medications taken
-                      </Label>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Medication
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Sugar & BP Section */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Sugar & BP Levels</Label>
-                  <Checkbox
-                    checked={sugarBpData[mealId].showAdd}
-                    onCheckedChange={(checked) => 
-                      handleSugarBpChange(mealId, 'showAdd', checked)
-                    }
-                  />
-                </div>
-                
-                {sugarBpData[mealId].showAdd && (
-                  <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1">
-                          <Droplets className="h-3 w-3" />
-                          Sugar (mg/dL)
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="120"
-                          value={sugarBpData[mealId].sugar}
-                          onChange={(e) => handleSugarBpChange(mealId, 'sugar', e.target.value)}
-                          className="h-8"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1">
-                          <Activity className="h-3 w-3" />
-                          BP (mmHg)
-                        </Label>
-                        <Input
-                          placeholder="120/80"
-                          value={sugarBpData[mealId].bp}
-                          onChange={(e) => handleSugarBpChange(mealId, 'bp', e.target.value)}
-                          className="h-8"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      {/* Export & Save Actions */}
-      <Card className="shadow-soft bg-primary/5 border-primary/20">
-        <CardContent className="p-4 space-y-3">
-          <Button onClick={saveMealData} variant="sakura" className="w-full">
-            Save All Data
-          </Button>
-          <Button onClick={exportToDoctor} variant="outline" className="w-full">
-            <FileDown className="h-4 w-4 mr-2" />
-            Export to Doctor
-          </Button>
-        </CardContent>
-      </Card>
+        <Button 
+          onClick={exportToDoctor}
+          variant="outline" 
+          className="w-full shadow-soft hover:shadow-sakura"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Export to Doctor
+        </Button>
+      </div>
     </div>
   );
 }

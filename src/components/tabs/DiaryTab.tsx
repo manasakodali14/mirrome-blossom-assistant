@@ -1,13 +1,22 @@
-import { useState } from "react";
-import { BookOpen, Calendar, Heart, Smile } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Calendar, Heart, Smile, ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarComp } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { dataService, DiaryEntry } from "@/lib/dataService";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function DiaryTab() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [diaryEntry, setDiaryEntry] = useState('');
   const [selectedMood, setSelectedMood] = useState('');
+  const [gratitude, setGratitude] = useState(['', '', '']);
+  const { toast } = useToast();
 
   const moods = [
     { emoji: '😊', label: 'Happy', value: 'happy' },
@@ -18,13 +27,59 @@ export function DiaryTab() {
     { emoji: '😄', label: 'Excited', value: 'excited' }
   ];
 
-  const saveEntry = () => {
-    if (diaryEntry.trim()) {
-      // Save logic here
-      console.log('Saving diary entry:', { entry: diaryEntry, mood: selectedMood });
+  useEffect(() => {
+    loadDiaryEntry();
+  }, [selectedDate]);
+
+  const loadDiaryEntry = () => {
+    const dateStr = dataService.formatDate(selectedDate);
+    const savedEntry = dataService.getDiaryEntry(dateStr);
+    
+    if (savedEntry) {
+      setDiaryEntry(savedEntry.entry);
+      setSelectedMood(savedEntry.mood || '');
+      setGratitude(savedEntry.gratitude || ['', '', '']);
+    } else {
       setDiaryEntry('');
       setSelectedMood('');
+      setGratitude(['', '', '']);
     }
+  };
+
+  const saveEntry = () => {
+    if (diaryEntry.trim() || selectedMood || gratitude.some(g => g.trim())) {
+      const dateStr = dataService.formatDate(selectedDate);
+      const entry: DiaryEntry = {
+        id: dateStr,
+        date: dateStr,
+        entry: diaryEntry,
+        mood: selectedMood,
+        gratitude: gratitude.filter(g => g.trim())
+      };
+      
+      dataService.saveDiaryEntry(dateStr, entry);
+      toast({
+        title: "Diary entry saved! 📖",
+        description: "Your thoughts have been recorded safely",
+      });
+    }
+  };
+
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
+    setSelectedDate(newDate);
+  };
+
+  const isToday = () => {
+    const today = new Date();
+    return selectedDate.toDateString() === today.toDateString();
+  };
+
+  const updateGratitude = (index: number, value: string) => {
+    const newGratitude = [...gratitude];
+    newGratitude[index] = value;
+    setGratitude(newGratitude);
   };
 
   return (
@@ -41,21 +96,65 @@ export function DiaryTab() {
         </CardHeader>
       </Card>
 
-      {/* Today's Entry */}
+      {/* Date Navigation */}
+      <Card className="shadow-soft">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigateDate('prev')}
+              className="hover:shadow-sakura"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "min-w-[200px] justify-center text-center font-medium shadow-soft hover:shadow-sakura",
+                      isToday() && "bg-primary/10 border-primary/30"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {format(selectedDate, "EEE, MMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <CalendarComp
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {isToday() && <Badge variant="secondary">Today</Badge>}
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigateDate('next')}
+              className="hover:shadow-sakura"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Diary Entry */}
       <Card className="shadow-soft">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Today's Entry
+            <BookOpen className="h-5 w-5 text-primary" />
+            {isToday() ? "Today's Entry" : `Entry for ${format(selectedDate, "MMM d, yyyy")}`}
           </CardTitle>
-          <CardDescription>
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -95,24 +194,37 @@ export function DiaryTab() {
             variant="sakura" 
             size="lg" 
             className="w-full"
-            disabled={!diaryEntry.trim()}
+            disabled={!diaryEntry.trim() && !selectedMood && !gratitude.some(g => g.trim())}
           >
+            <Save className="h-4 w-4 mr-2" />
             Save Entry
           </Button>
         </CardContent>
       </Card>
 
-      {/* Quick Reflection */}
+      {/* Gratitude Practice */}
       <Card className="shadow-soft bg-gradient-rose">
-        <CardContent className="p-6 text-center">
-          <Heart className="h-8 w-8 text-primary mx-auto mb-3" />
-          <h3 className="font-semibold mb-2">Daily Reflection</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Take a moment to reflect on three things you're grateful for today
-          </p>
-          <Badge variant="secondary" className="shadow-soft">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Heart className="h-5 w-5 text-primary" />
             Gratitude Practice
-          </Badge>
+          </CardTitle>
+          <CardDescription>
+            Three things you're grateful for today
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="space-y-1">
+              <label className="text-sm font-medium">Gratitude {index + 1}</label>
+              <Textarea
+                value={gratitude[index]}
+                onChange={(e) => updateGratitude(index, e.target.value)}
+                placeholder={`I'm grateful for...`}
+                className="min-h-16 resize-none shadow-soft focus:shadow-sakura transition-shadow"
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 
