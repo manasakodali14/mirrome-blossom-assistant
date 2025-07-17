@@ -17,7 +17,8 @@ export interface TaskData {
   date: string;
   dueTime?: string;
   isRecurring?: boolean;
-  frequency?: 'daily' | 'weekly' | 'monthly';
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays' | 'weekends' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  isActive?: boolean;
 }
 
 export interface DiaryEntry {
@@ -65,8 +66,11 @@ export interface Medication {
   id: string;
   name: string;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' | 'other';
-  timing: 'before' | 'after' | 'with';
+  timing: 'before' | 'after' | 'with' | 'independent';
   dosage?: string;
+  frequency?: string;
+  notes?: string;
+  isActive?: boolean;
 }
 
 export interface PeriodData {
@@ -101,12 +105,24 @@ export interface FinancialData {
 
 export interface NotificationData {
   id: string;
-  type: "birthday" | "task" | "diary" | "medication" | "health";
+  type: "birthday" | "task" | "diary" | "medication" | "health" | "reminder";
   title: string;
   message: string;
   time: string;
   isRead: boolean;
   date: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  type: 'task' | 'reminder' | 'birthday' | 'appointment';
+  date: string;
+  time?: string;
+  description?: string;
+  isRecurring: boolean;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  isCompleted: boolean;
 }
 
 class DataService {
@@ -212,6 +228,15 @@ class DataService {
 
   getNotifications(): NotificationData[] {
     return this.load<NotificationData[]>(this.getStorageKey('notifications')) || [];
+  }
+
+  // Calendar events
+  saveCalendarEvents(events: CalendarEvent[]): void {
+    this.save(this.getStorageKey('calendar_events'), events);
+  }
+
+  getCalendarEvents(): CalendarEvent[] {
+    return this.load<CalendarEvent[]>(this.getStorageKey('calendar_events')) || [];
   }
 
   // Utility methods

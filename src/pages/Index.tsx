@@ -13,6 +13,9 @@ import { Profile } from "@/components/pages/Profile";
 import { PeriodTracker } from "@/components/pages/PeriodTracker";
 import { FinancialTracker } from "@/components/pages/FinancialTracker";
 import { NotificationManager } from "@/components/pages/NotificationManager";
+import { Calendar } from "@/components/pages/Calendar";
+import { RecurringTasks } from "@/components/pages/RecurringTasks";
+import { MedicationManager } from "@/components/pages/MedicationManager";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -53,21 +56,22 @@ const Index = () => {
       switch (currentPage) {
         case "profile":
           return <Profile userData={user} onSignOut={handleSignOut} />;
+        case "calendar":
+          return <Calendar />;
+        case "recurring-tasks":
+          return <RecurringTasks />;
+        case "medications":
+          return <MedicationManager />;
         case "period-tracker":
           return <PeriodTracker />;
         case "financial":
           return <FinancialTracker />;
         case "notifications":
           return <NotificationManager />;
+        case "export":
+          return <div className="p-6"><h2>Export functionality coming soon!</h2></div>;
         default:
-          return (
-            <div className="p-6">
-              <h2 className="text-xl font-semibold">Feature Coming Soon</h2>
-              <p className="text-muted-foreground mt-2">
-                This feature is under development and will be available soon.
-              </p>
-            </div>
-          );
+          return <TaskManager userName={user?.fullName} />;
       }
     }
 
