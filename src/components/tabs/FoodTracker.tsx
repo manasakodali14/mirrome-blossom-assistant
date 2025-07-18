@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UtensilsCrossed, Coffee, Sandwich, Pizza, Cookie, Clock, Plus, Pill, Calendar, ChevronLeft, ChevronRight, Save, FileText, Activity, Droplets } from "lucide-react";
+import { Utensils, Coffee, Sandwich, Pizza, Cookie, Clock, Plus, Pill, Calendar, ChevronLeft, ChevronRight, Save, FileText, Activity, Droplets } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -161,7 +161,7 @@ export function FoodTracker() {
       <Card className="bg-gradient-soft shadow-sakura">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5 text-primary" />
+            <Utensils className="h-5 w-5 text-primary" />
             Food Tracker
           </CardTitle>
           <CardDescription>

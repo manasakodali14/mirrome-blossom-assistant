@@ -16,6 +16,7 @@ import { NotificationManager } from "@/components/pages/NotificationManager";
 import { Calendar } from "@/components/pages/Calendar";
 import { RecurringTasks } from "@/components/pages/RecurringTasks";
 import { MedicationManager } from "@/components/pages/MedicationManager";
+import { ExportManager } from "@/components/pages/ExportManager";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -69,7 +70,7 @@ const Index = () => {
         case "notifications":
           return <NotificationManager />;
         case "export":
-          return <div className="p-6"><h2>Export functionality coming soon!</h2></div>;
+          return <ExportManager />;
         default:
           return <TaskManager userName={user?.fullName} />;
       }
